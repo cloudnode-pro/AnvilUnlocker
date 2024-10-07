@@ -2,65 +2,70 @@ name: CI
 
 on:
   push:
-  pull_request_target:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  release:
+    types: [ "published" ]
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.version.outputs.VERSION }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: "true"
 
       - name: Set Up Java
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          distribution: 'adopt'
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
       # Use cache to speed up build
       - name: Cache Maven Repo
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         id: cache
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
 
+      - name: Get version
+        run: |
+          TAG=$(git describe --tags --always)
+          echo "VERSION=${TAG#v}" >> $GITHUB_OUTPUT
+        id: version
+
+      - name: Set version
+        run: mvn -B versions:set -DnewVersion=${{ steps.version.outputs.VERSION }} -DgenerateBackupPoms=false
+
       - name: Build With Maven
         run: mvn -e clean package -am -P all
 
-      # Upload artifacts
       - name: Upload Distributable Jar
         id: upload-final
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: ./target/AnvilUnlocker.jar
+          path: ./target/AnvilUnlocker-${{ steps.version.outputs.VERSION }}.jar
 
   release:
     name: Create Github Release
     needs: [ build ]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
 
-      - name: Parse Tag Name
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
-
-      - name: Create Release
-        id: create-release
-        uses: softprops/action-gh-release@v0.1.5
+      - name: Upload to release
+        uses: JasonEtco/upload-to-release@master
+        with:
+          args: ./dist/AnvilUnlocker-${{ needs.build.outputs.VERSION }}.jar application/java-archive
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          name: AnvilUnlocker ${{ steps.get_version.outputs.result }}
-          draft: true
-          prerelease: true
-          files: ./dist/AnvilUnlocker.jar
