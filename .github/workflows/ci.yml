@@ -12,60 +12,65 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    outputs:
-      VERSION: ${{ steps.version.outputs.VERSION }}
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
-          fetch-depth: 0
-          fetch-tags: "true"
-
-      - name: Set Up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: "17"
-
-      # Use cache to speed up build
-      - name: Cache Maven Repo
-        uses: actions/cache@v4
-        id: cache
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-
-      - name: Get version
-        run: |
-          TAG=$(git describe --tags --always)
-          echo "VERSION=${TAG#v}" >> $GITHUB_OUTPUT
-        id: version
-
-      - name: Set version
-        run: mvn -B versions:set -DnewVersion=${{ steps.version.outputs.VERSION }} -DgenerateBackupPoms=false
+          java-version: 17
+          distribution: temurin
+          cache: maven
 
       - name: Build With Maven
-        run: mvn -e clean package -am -P all
+        run: mvn -B package --file pom.xml
 
-      - name: Upload Distributable Jar
-        id: upload-final
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: ./target/AnvilUnlocker-${{ steps.version.outputs.VERSION }}.jar
-
-  release:
-    name: Create Github Release
-    needs: [ build ]
-    if: github.event_name == 'release'
+  publish:
+    name: Publish
     runs-on: ubuntu-latest
+
     steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: temurin
+          cache: maven
+
+      - name: Set version from release tag
+        run: mvn -B versions:set -DnewVersion=${{ github.event.release.tag_name }} -DgenerateBackupPoms=false
+
+      - name: Build and package Maven project
+        run: mvn -B clean package --file pom.xml
 
       - name: Upload to release
-        uses: JasonEtco/upload-to-release@master
+        uses: cloudnode-pro/release-upload-asset@1.0.2
         with:
-          args: ./dist/AnvilUnlocker-${{ needs.build.outputs.VERSION }}.jar application/java-archive
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh-token: ${{ github.token }}
+          files: target/AnvilUnlocker-${{ github.event.release.tag_name }}.jar; type=application/java-archive
+
+      - name: Upload to Modrinth
+        uses: cloudnode-pro/modrinth-publish@v2
+        with:
+          token: ${{ secrets.MODRINTH_TOKEN }}
+          project: ${{ github.event.repository.custom_properties.modrinth_id }}
+          name: ${{ github.event.release.name == github.event.release.tag_name && format('AnvilUnlocker {0}', github.event.release.name) || github.event.release.name }}
+          version: ${{ github.event.release.tag_name }}
+          changelog: ${{ github.event.release.body }}
+          loaders: |-
+            paper
+            bukkit
+            spigot
+          game-versions: |-
+            1.15.x
+            1.16.x
+            1.17.x
+            1.18.x
+            1.19.x
+            1.20.x
+            1.21.x
+          files: target/AnvilUnlocker-${{ github.event.release.tag_name }}.jar
