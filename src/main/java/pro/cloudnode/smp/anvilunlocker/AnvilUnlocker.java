@@ -1,4 +1,4 @@
-package com.github.jikoo.anvilunlocker;
+package pro.cloudnode.smp.anvilunlocker;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
