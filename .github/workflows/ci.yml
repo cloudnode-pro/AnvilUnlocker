@@ -16,10 +16,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v5
         with:
-          java-version: 17
+          java-version: 8
           distribution: temurin
           cache: maven
 
@@ -35,10 +35,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v5
         with:
-          java-version: 17
+          java-version: 8
           distribution: temurin
           cache: maven
 
