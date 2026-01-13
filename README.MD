@@ -12,6 +12,6 @@ The new level cap is configurable. Any integer from 41 to 32,767 is valid.
 
 Due to Vanilla client limitations:
 
-* Anvil costs above 40 cannot be displayed in red if the client lacks the required
+* Anvil costs above 40 levels cannot be displayed in red if the client lacks the required
   experience. For simplicity and consistency, the mechanic of the cost turning red is disabled entirely.
-* Costs greater than 32,767 cannot be rendered correctly and are therefore not supported.
+* Costs greater than 32,767 levels cannot be rendered correctly and are therefore not supported.
