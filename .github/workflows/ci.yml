@@ -42,8 +42,14 @@ jobs:
           distribution: temurin
           cache: maven
 
+      - name: Get version from release tag
+        run: |
+          TAG=${{ github.event.release.tag_name }}
+          echo "VERSION=${TAG#v}" >> $GITHUB_OUTPUT
+        id: version
+
       - name: Set version from release tag
-        run: mvn -B versions:set -DnewVersion=${{ github.event.release.tag_name }} -DgenerateBackupPoms=false
+        run: mvn -B versions:set -DnewVersion=${{ steps.version.outputs.VERSION }} -DgenerateBackupPoms=false
 
       - name: Build and package Maven project
         run: mvn -B clean package --file pom.xml
@@ -52,7 +58,7 @@ jobs:
         uses: cloudnode-pro/release-upload-asset@1.0.2
         with:
           gh-token: ${{ github.token }}
-          files: target/AnvilUnlocker-${{ github.event.release.tag_name }}.jar; type=application/java-archive
+          files: target/AnvilUnlocker-${{ steps.version.outputs.VERSION }}.jar; type=application/java-archive
 
       - name: Upload to Modrinth
         uses: cloudnode-pro/modrinth-publish@v2
@@ -60,7 +66,7 @@ jobs:
           token: ${{ secrets.MODRINTH_TOKEN }}
           project: ${{ github.event.repository.custom_properties.modrinth_id }}
           name: ${{ github.event.release.name == github.event.release.tag_name && format('AnvilUnlocker {0}', github.event.release.name) || github.event.release.name }}
-          version: ${{ github.event.release.tag_name }}
+          version: ${{ steps.version.outputs.VERSION }}
           changelog: ${{ github.event.release.body }}
           loaders: |-
             paper
@@ -74,4 +80,4 @@ jobs:
             1.19.x
             1.20.x
             1.21.x
-          files: target/AnvilUnlocker-${{ github.event.release.tag_name }}.jar
+          files: target/AnvilUnlocker-${{ steps.version.outputs.VERSION }}.jar
