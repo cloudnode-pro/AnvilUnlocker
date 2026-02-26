@@ -18,67 +18,68 @@ import org.jspecify.annotations.NullMarked;
 
 @NullMarked
 public class AnvilUnlocker extends JavaPlugin implements Listener {
-	private int maximumCost = Short.MAX_VALUE;
+    private int maximumCost = Short.MAX_VALUE;
 
-	@Override
-	public void onEnable() {
-		saveDefaultConfig();
+    private static int constrainAnvilMax(int actual) {
+        return Math.min(Short.MAX_VALUE, Math.max(41, actual));
+    }
 
-		maximumCost = constrainAnvilMax(getConfig().getInt("maximumCost"));
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
 
-		getServer().getPluginManager().registerEvents(this, this);
-	}
+        maximumCost = constrainAnvilMax(getConfig().getInt("maximumCost"));
 
-	@Override
-	public void reloadConfig() {
-		super.reloadConfig();
-		maximumCost = constrainAnvilMax(getConfig().getInt("maximumCost"));
-	}
+        getServer().getPluginManager().registerEvents(this, this);
+    }
 
-	@EventHandler(priority = EventPriority.MONITOR)
-	private void onInventoryClose(InventoryCloseEvent event) {
-		if (event.getInventory() instanceof AnvilInventory
-				&& event.getPlayer() instanceof Player
-				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-			setInstantBuild((Player) event.getPlayer(), false);
-		}
-	}
+    @Override
+    public void reloadConfig() {
+        super.reloadConfig();
+        maximumCost = constrainAnvilMax(getConfig().getInt("maximumCost"));
+    }
 
-	@EventHandler(priority = EventPriority.MONITOR)
-	private void onPrepareAnvil(PrepareAnvilEvent event) {
-		if (!(event.getView().getPlayer() instanceof Player)
-				|| event.getView().getPlayer().getGameMode() == GameMode.CREATIVE) {
-			return;
-		}
+    @EventHandler(priority = EventPriority.MONITOR)
+    private void onInventoryClose(InventoryCloseEvent event) {
+        if (event.getInventory() instanceof AnvilInventory && event.getPlayer() instanceof Player
+                && event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+            setInstantBuild((Player) event.getPlayer(), false);
+        }
+    }
 
-		AnvilInventory anvil = event.getInventory();
-		anvil.setMaximumRepairCost(maximumCost);
+    @EventHandler(priority = EventPriority.MONITOR)
+    private void onPrepareAnvil(PrepareAnvilEvent event) {
+        if (!(event.getView().getPlayer() instanceof Player)
+                || event.getView().getPlayer().getGameMode() == GameMode.CREATIVE) {
+            return;
+        }
 
-		getServer().getScheduler().runTask(this, () -> {
-			ItemStack input2 = anvil.getItem(1);
-			setInstantBuild(
-					(Player) event.getView().getPlayer(),
-					// Prevent "Too Expensive!" with no secondary input.
-					input2 == null || input2.getType() == Material.AIR
-							// Display "Too Expensive!" if cost meets or exceeds maximum.
-							|| anvil.getRepairCost() < anvil.getMaximumRepairCost());
-		});
-	}
+        AnvilInventory anvil = event.getInventory();
+        anvil.setMaximumRepairCost(maximumCost);
 
-	public void setInstantBuild(Player player, boolean instantBuild) {
-		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ABILITIES);
-		packet.getBooleans().write(0, player.isInvulnerable());
-		packet.getBooleans().write(1, player.isFlying());
-		packet.getBooleans().write(2, player.getAllowFlight());
-		packet.getBooleans().write(3, instantBuild);
-		packet.getFloat().write(0, player.getFlySpeed() / 2);
-		packet.getFloat().write(1, player.getWalkSpeed() / 2);
+        getServer().getScheduler().runTask(
+                this, () -> {
+                    ItemStack input2 = anvil.getItem(1);
+                    setInstantBuild(
+                            (Player) event.getView().getPlayer(),
+                            // Prevent "Too Expensive!" with no secondary input.
+                            input2 == null || input2.getType() == Material.AIR
+                                    // Display "Too Expensive!" if cost meets or exceeds maximum.
+                                    || anvil.getRepairCost() < anvil.getMaximumRepairCost()
+                    );
+                }
+        );
+    }
 
-		ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
-	}
+    public void setInstantBuild(Player player, boolean instantBuild) {
+        PacketContainer packet = new PacketContainer(PacketType.Play.Server.ABILITIES);
+        packet.getBooleans().write(0, player.isInvulnerable());
+        packet.getBooleans().write(1, player.isFlying());
+        packet.getBooleans().write(2, player.getAllowFlight());
+        packet.getBooleans().write(3, instantBuild);
+        packet.getFloat().write(0, player.getFlySpeed() / 2);
+        packet.getFloat().write(1, player.getWalkSpeed() / 2);
 
-	private static int constrainAnvilMax(int actual) {
-		return Math.min(Short.MAX_VALUE, Math.max(41, actual));
-	}
-
+        ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
+    }
 }
