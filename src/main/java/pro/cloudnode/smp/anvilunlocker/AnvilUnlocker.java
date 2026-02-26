@@ -14,10 +14,10 @@ import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NullMarked;
 
+@NullMarked
 public class AnvilUnlocker extends JavaPlugin implements Listener {
-
 	private int maximumCost = Short.MAX_VALUE;
 
 	@Override
@@ -36,7 +36,7 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
-	private void onInventoryClose(@NotNull InventoryCloseEvent event) {
+	private void onInventoryClose(InventoryCloseEvent event) {
 		if (event.getInventory() instanceof AnvilInventory
 				&& event.getPlayer() instanceof Player
 				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
@@ -45,7 +45,7 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
-	private void onPrepareAnvil(@NotNull PrepareAnvilEvent event) {
+	private void onPrepareAnvil(PrepareAnvilEvent event) {
 		if (!(event.getView().getPlayer() instanceof Player)
 				|| event.getView().getPlayer().getGameMode() == GameMode.CREATIVE) {
 			return;
@@ -65,7 +65,7 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 		});
 	}
 
-	public void setInstantBuild(@NotNull Player player, boolean instantBuild) {
+	public void setInstantBuild(Player player, boolean instantBuild) {
 		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ABILITIES);
 		packet.getBooleans().write(0, player.isInvulnerable());
 		packet.getBooleans().write(1, player.isFlying());
