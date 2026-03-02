@@ -55,7 +55,7 @@ jobs:
         run: mvn -B clean package --file pom.xml
 
       - name: Upload to release
-        uses: cloudnode-pro/release-upload-asset@v1.0.6
+        uses: cloudnode-pro/release-upload-asset@v1.0.7
         with:
           gh-token: ${{ github.token }}
           files: target/AnvilUnlocker-${{ steps.version.outputs.VERSION }}.jar; type=application/java-archive
